@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101b2a">
+  <meta name="description" content="Parametric STL generator for drawer dividers with rounded bottom relief, trapezoidal profiles and print-bed layout.">
+  <title>Divider Generator</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#1a2938; background:#f4f6f9; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; }
+    header { background:#101b2a; color:#f7fbff; padding:26px max(22px,calc((100vw - 1250px)/2)); }
+    .head { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .brand {display:flex;gap:13px;align-items:center;}
+    .mark {font-size:24px;background:#32c4ab;color:#0a2c2a;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:900;}
+    h1 {margin:0;font-size:23px;letter-spacing:-.7px;}
+    .sub {color:#a8b6c6;font-size:13px;margin-top:3px;}
+    .lang-switch {display:flex;gap:3px;border:1px solid #3c5869;padding:4px;border-radius:11px;}
+    .lang-switch button {min-height:30px;padding:5px 10px;border:0;background:transparent;color:#c7d5e4;border-radius:7px;}
+    .lang-switch button[aria-pressed="true"] {background:#32c4ab;color:#082b27;}
+    main {max-width:1294px;margin:0 auto;padding:24px 22px 60px;display:grid;grid-template-columns:366px minmax(0,1fr);gap:20px;align-items:start;}
+    .panel {background:white;border:1px solid #e1e7ee;box-shadow:0 4px 26px rgba(17,40,57,.035);border-radius:17px;overflow:hidden;}
+    .pad {padding:22px;}
+    h2 {font-size:16px;margin:0 0 16px;letter-spacing:-.25px;}
+    .section {padding:19px 22px;border-top:1px solid #e8ecf1;}
+    .section h3 {margin:0 0 13px;font-size:14px;}
+    .fields {display:grid;grid-template-columns:1fr 1fr;gap:13px 12px;}
+    .field {display:flex;flex-direction:column;gap:5px;min-width:0;}
+    label {font-size:12px;font-weight:650;color:#435267;}
+    input[type=number] {width:100%;border:1px solid #ced7e1;border-radius:8px;padding:10px 11px;height:40px;font-size:15px;background:#fff;color:#142331;outline:none;}
+    input:focus {border-color:#168c78;box-shadow:0 0 0 3px #27ad9522;}
+    .hint {font-size:11px;color:#7a8797;line-height:1.45;}
+    .toggle {display:flex;gap:9px;align-items:center;margin-bottom:12px;}
+    .toggle input {accent-color:#168c78;width:16px;height:16px;margin:0;}
+    .toggle label {font-size:13px;color:#233749;cursor:pointer;}
+    .disabled {opacity:.42;pointer-events:none;}
+    .actions {display:grid;gap:9px;margin-top:16px;}
+    button {cursor:pointer;border-radius:9px;font-weight:700;font-size:13px;min-height:43px;padding:9px 12px;border:1px solid #ccd7e3;background:white;color:#22394d;}
+    button:hover:not(:disabled) {filter:brightness(.97);}
+    button.primary {background:#138b79;border-color:#138b79;color:white;}
+    button:disabled {opacity:.5;cursor:not-allowed;}
+    .inline {display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .info {font-size:12px;color:#5c6b7e;line-height:1.55;}
+    .stats {display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+    .stat {background:#f2f7f8;border:1px solid #e5f0f0;border-radius:11px;padding:12px 9px;}
+    .stat strong {font-size:22px;display:block;color:#0c5c50;font-variant-numeric:tabular-nums;}
+    .stat span {font-size:11px;color:#536c72;}
+    .preview-title {display:flex;align-items:baseline;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-bottom:9px;}
+    .preview-title h3 {font-size:14px;margin:0;}
+    .preview-title span {font-size:11px;color:#8a96a4;}
+    .view {border:1px solid #e2e8ef;border-radius:12px;background:repeating-linear-gradient(0deg,#f8fafc,#f8fafc 19px,#f0f4f8 20px),repeating-linear-gradient(90deg,transparent,transparent 19px,#ecf0f4 20px);overflow:hidden;padding:13px;display:flex;justify-content:center;align-items:center;}
+    svg {width:100%;height:auto;display:block;max-height:290px;}
+    .profiles {display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+    .profile .view {height:170px;}
+    .profile svg {max-height:133px;}
+    .bedview {background:#f1f5f9;padding:12px;}
+    .bedview svg {max-height:400px;min-height:150px;}
+    .bed-result {font-size:13px;font-weight:750;line-height:1.4;margin:9px 0 0;}
+    .bed-result.ok {color:#12836e;}
+    .bed-result.fail {color:#ae3a30;}
+    .notice {padding:12px 14px;font-size:12px;line-height:1.5;border-radius:10px;background:#eef8f5;color:#246052;margin-top:15px;}
+    .notice.error {background:#fff0ed;color:#943e2d;}
+    .caption {font-size:11px;color:#768598;margin-top:7px;}
+    footer {max-width:1240px;margin:0 auto;padding:0 22px 38px;font-size:12px;color:#7b8796;}
+    @media(max-width:850px) {main {grid-template-columns:1fr;}.profiles {grid-template-columns:1fr 1fr;}}
+    @media(max-width:490px) {.profiles {grid-template-columns:1fr;}.stats {grid-template-columns:repeat(2,1fr);}.pad,.section {padding:16px;}header{padding:20px;}main{padding:15px;}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <div class="brand"><div class="mark" aria-hidden="true">⊞</div><div><h1>Divider Generator</h1><div class="sub" data-i18n="subtitle">Генератор перегородок для ящиков · STL</div></div></div>
+    <div class="lang-switch" role="group" aria-label="Language / Язык"><button type="button" id="langRu" aria-pressed="true">RU</button><button type="button" id="langEn" aria-pressed="false">EN</button></div>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <div class="pad">
+      <h2 data-i18n="sizeTitle">Размеры деталей</h2>
+      <div class="fields">
+        <div class="field"><label for="width" data-i18n="width">Ширина ящика, мм</label><input id="width" type="number" min="10" max="600" step="0.1" value="49"></div>
+        <div class="field"><label for="depth" data-i18n="depth">Глубина ящика, мм</label><input id="depth" type="number" min="10" max="600" step="0.1" value="140"></div>
+        <div class="field"><label for="height" data-i18n="height">Высота перегородок, мм</label><input id="height" type="number" min="5" max="150" step="0.1" value="27"></div>
+      </div>
+      <p class="hint" data-i18n="sizeHint">Эти значения задают длину пластин напрямую. Для свободной посадки укажи размер чуть меньше измеренного внутри ящика.</p>
+    </div>
+    <div class="section">
+      <h3 data-i18n="gridTitle">Сетка</h3>
+      <div class="fields">
+        <div class="field"><label for="cols" data-i18n="cols">Колонок по ширине</label><input id="cols" type="number" min="1" max="20" step="1" value="2"></div>
+        <div class="field"><label for="rows" data-i18n="rows">Рядов по глубине</label><input id="rows" type="number" min="1" max="20" step="1" value="5"></div>
+        <div class="field"><label for="thickness" data-i18n="thickness">Толщина пластины, мм</label><input id="thickness" type="number" min="0.6" max="6" step="0.1" value="1.6"></div>
+        <div class="field"><label for="slotGap" data-i18n="slotGap">Зазор соединительных пазов, мм</label><input id="slotGap" type="number" min="0" max="2" step="0.05" value="0.25"></div>
+      </div>
+      <p class="hint" data-i18n="slotHint">Продольные и поперечные пластины соединяются через пазы на половину высоты.</p>
+    </div>
+    <div class="section">
+      <h3 data-i18n="shapeTitle">Геометрия боковых краёв</h3>
+      <div class="toggle"><input type="checkbox" id="useTaper" checked><label for="useTaper" data-i18n="useTaper">Трапециевидная форма</label></div>
+      <div id="taperField" style="margin-bottom:15px">
+        <div class="fields">
+          <div class="field"><label for="depthBottom" data-i18n="depthBottom">Продольная: длина снизу, мм</label><input id="depthBottom" type="number" min="1" max="600" step="0.1" value="137"></div>
+          <div class="field"><label for="widthBottom" data-i18n="widthBottom">Поперечная: длина снизу, мм</label><input id="widthBottom" type="number" min="1" max="600" step="0.1" value="46"></div>
+        </div>
+        <p class="hint" data-i18n="bottomHint">Длины верхних краёв задаются глубиной и шириной ящика. Нижние вырезы у дна учитываются отдельно.</p>
+      </div>
+      <div class="toggle"><input type="checkbox" id="useRound" checked><label for="useRound" data-i18n="useRound">Вырезы у дна</label></div>
+      <div id="radiusField" class="field"><label for="radius" data-i18n="radius">Радиус нижних вырезов, мм</label><input id="radius" type="number" min="0" max="30" step="0.1" value="2.5"><div class="hint" data-i18n="radiusHint">Освобождает место под скруглённый переход от стенок к дну.</div></div>
+    </div>
+    <div class="section">
+      <h3 data-i18n="bedTitle">Стол 3D-принтера</h3>
+      <div class="fields">
+        <div class="field"><label for="bedWidth" data-i18n="bedWidth">Ширина стола, мм</label><input id="bedWidth" type="number" min="20" max="2000" step="1" value="220"></div>
+        <div class="field"><label for="bedDepth" data-i18n="bedDepth">Глубина стола, мм</label><input id="bedDepth" type="number" min="20" max="2000" step="1" value="220"></div>
+        <div class="field"><label for="bedMargin" data-i18n="bedMargin">Отступ от краёв стола, мм</label><input id="bedMargin" type="number" min="0" max="100" step="1" value="10"></div>
+      </div>
+      <p class="hint" data-i18n="bedHint">Пластины располагаются компактной группой по центру стола, с промежутком 3 мм.</p>
+    </div>
+    <div class="section">
+      <h3 data-i18n="downloadTitle">Скачать для печати</h3>
+      <div class="actions">
+        <button class="primary" id="downloadAll" data-i18n="downloadAll">Скачать весь набор STL</button>
+        <div class="inline"><button id="downloadLong" data-i18n="downloadLong">Продольные STL</button><button id="downloadCross" data-i18n="downloadCross">Поперечные STL</button></div>
+      </div>
+      <p class="hint" data-i18n="printHint">STL сохраняет ту же раскладку, что показана на столе. Если всё не помещается, попробуй увеличить стол или скачать виды перегородок отдельно.</p>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="pad">
+      <h2 data-i18n="preview">Предпросмотр</h2>
+      <div class="stats">
+        <div class="stat"><strong id="statCells">10</strong><span data-i18n="cells">отделений</span></div>
+        <div class="stat"><strong id="statLong">1</strong><span data-i18n="long">продольных</span></div>
+        <div class="stat"><strong id="statCross">4</strong><span data-i18n="cross">поперечных</span></div>
+
+      </div>
+      <div style="margin-top:24px" class="preview-title"><h3 data-i18n="topTitle">Вид сверху</h3><span id="sizeLabel">49 × 140 мм</span></div>
+      <div class="view"><svg id="topView" role="img" aria-label="Top view"></svg></div>
+      <div style="margin-top:22px" class="preview-title"><h3 data-i18n="profileTitle">Профили пластин · вид сбоку</h3><span data-i18n="profileCaption">Трапеция, вырезы и пазы</span></div>
+      <div class="profiles">
+        <div class="profile"><div class="view"><svg id="longView" role="img" aria-label="Longitudinal plate"></svg></div><div class="caption" id="longLabel"></div></div>
+        <div class="profile"><div class="view"><svg id="crossView" role="img" aria-label="Transverse plate"></svg></div><div class="caption" id="crossLabel"></div></div>
+      </div>
+      <div style="margin-top:24px" class="preview-title"><h3 data-i18n="bedPreviewTitle">Расположение на столе</h3><span id="bedSizeLabel">220 × 220 мм</span></div>
+      <div class="view bedview"><svg id="bedView" role="img" aria-label="Print bed layout"></svg></div>
+      <p id="bedResult" class="bed-result" role="status" aria-live="polite"></p>
+      <p class="caption" data-i18n="bedCaption">Схема соответствует раскладке в STL. Красные детали не поместились и в файл общего набора не включаются.</p>
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <div style="margin-top:20px" class="info" data-i18n="howText">Генератор создаёт только внутренние перегородки без дна и наружных стенок. Все STL формируются в браузере.</div>
+    </div>
+  </section>
+</main>
+<footer data-i18n="footer">Размеры и точность печати зависят от материала и настройки принтера. Перегородки рассчитаны на хранение внутри ящика, не на переноску вверх дном.</footer>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const numberIds=['width','depth','height','cols','rows','thickness','slotGap','depthBottom','widthBottom','radius','bedWidth','bedDepth','bedMargin'];
+const I18N={
+ ru:{
+   subtitle:'Генератор перегородок для ящиков · STL',sizeTitle:'Размеры деталей',width:'Ширина ящика, мм',depth:'Глубина ящика, мм',height:'Высота перегородок, мм',sizeHint:'Ширина и глубина определяют длину верхнего края пластин. Для свободной посадки укажи их чуть меньше размеров ящика.',
+   gridTitle:'Сетка',cols:'Колонок по ширине',rows:'Рядов по глубине',thickness:'Толщина пластины, мм',slotGap:'Зазор соединительных пазов, мм',slotHint:'Продольные и поперечные пластины соединяются через пазы на половину высоты.',
+   shapeTitle:'Геометрия боковых краёв',useTaper:'Трапециевидная форма',depthBottom:'Продольная: длина снизу, мм',widthBottom:'Поперечная: длина снизу, мм',bottomHint:'Сверху длины равны глубине и ширине ящика. Нижние вырезы у дна дополнительно сокращают край.',useRound:'Вырезы у дна',radius:'Радиус нижних вырезов, мм',radiusHint:'Оставляет место для скруглённого перехода от стенок ящика к его дну.',
+   bedTitle:'Стол 3D-принтера',bedWidth:'Ширина стола, мм',bedDepth:'Глубина стола, мм',bedMargin:'Отступ от краёв стола, мм',bedHint:'Детали раскладываются компактной группой в центре стола, с промежутком 3 мм и поворотом на 90° при необходимости.',
+   downloadTitle:'Скачать для печати',downloadAll:'Скачать весь набор STL',downloadLong:'Продольные STL',downloadCross:'Поперечные STL',printHint:'Экспорт соответствует раскладке на столе. Если всё не помещается, попробуй другой размер стола или скачай виды пластин отдельно.',
+   preview:'Предпросмотр',cells:'отделений',long:'продольных',cross:'поперечных',topTitle:'Вид сверху',profileTitle:'Профили пластин · вид сбоку',profileCaption:'Трапеция, вырезы и пазы',bedPreviewTitle:'Расположение на столе',bedCaption:'Показаны реальные контуры пластин. Не поместившиеся детали указаны отдельно.',
+   howText:'Генератор создаёт только внутренние перегородки без дна и наружных стенок. STL формируется локально в браузере.',footer:'Размеры и точность печати зависят от материала и настройки принтера. Перегородки рассчитаны на хранение внутри ящика, не на переноску вверх дном.',
+   notNeeded:'Не требуется',longName:'Продольная',crossName:'Поперечная',mm:'мм',invalidNumbers:'Заполни числовые поля.',invalidDimensions:'Проверь размеры деталей: 10–600 мм по длине, 5–150 мм по высоте.',invalidGrid:'Количество рядов и колонок должно быть от 1 до 20.',invalidPrint:'Проверь толщину и зазор пазов.',invalidBed:'Размер каждой стороны стола должен быть от 20 до 2000 мм.',invalidMargin:'Отступ от краёв должен быть неотрицательным и оставлять место для деталей.',invalidBottom:'Длина снизу должна быть больше нуля и не превышать длину сверху.',invalidRadius:'Радиус выреза должен быть хотя бы на 1 мм меньше высоты перегородки.',tooNarrow:'Нижний край слишком короткий для выбранного скругления.',slotsClose:'Пазы расположены слишком близко друг к другу.',slotAtEdge:'Паз пересекает нижний край пластины. Уменьши вырез или разницу длин.',badOutline:'Некорректный контур пластины.',triangulation:'Не удалось построить STL с такими параметрами.',noDividers:'Для сетки 1 × 1 перегородки не нужны.',fixParams:'Сначала исправь параметры.',noKind:'Перегородок выбранного типа нет.',bedDoesNotFit:'Не все детали поместились на выбранный стол. Измени настройки или скачай виды отдельно.',
+   bedFit:(n,w,h)=>`Все ${n} пластин помещаются на стол ${w} × ${h} мм.`,bedOverflow:(placed,all,w,h)=>`Поместилось ${placed} из ${all} пластин на стол ${w} × ${h} мм. Не помещается: ${all-placed}.`,validStatus:'Готово к экспорту. Раскладка сохраняется в STL.',overflowStatus:'Для полного набора недостаточно места на столе. Количество непоместившихся пластин показано над столом.'
+ },
+ en:{
+   subtitle:'Parametric drawer dividers · STL export',sizeTitle:'Part dimensions',width:'Drawer width, mm',depth:'Drawer depth, mm',height:'Divider height, mm',sizeHint:'Width and depth define the top edge lengths. Enter slightly smaller values than the interior drawer dimensions for clearance.',
+   gridTitle:'Grid',cols:'Columns across width',rows:'Rows along depth',thickness:'Plate thickness, mm',slotGap:'Interlocking slot clearance, mm',slotHint:'Longitudinal and transverse plates join via half-height slots.',
+   shapeTitle:'Side profile',useTaper:'Trapezoidal shape',depthBottom:'Longitudinal: bottom length, mm',widthBottom:'Transverse: bottom length, mm',bottomHint:'Top lengths equal drawer depth and width. Bottom corner reliefs shorten the bottom edge further.',useRound:'Bottom corner relief',radius:'Bottom relief radius, mm',radiusHint:'Allows clearance for the rounded transition from drawer walls to the floor.',
+   bedTitle:'3D printer bed',bedWidth:'Bed width, mm',bedDepth:'Bed depth, mm',bedMargin:'Bed edge clearance, mm',bedHint:'Plates are packed as a compact group in the center, with 3 mm spacing and optional 90° rotation.',
+   downloadTitle:'Download STL',downloadAll:'Download complete STL set',downloadLong:'Longitudinal STL',downloadCross:'Transverse STL',printHint:'The STL matches the bed layout. If all parts do not fit, choose a different bed size or download plate types separately.',
+   preview:'Preview',cells:'compartments',long:'longitudinal',cross:'transverse',topTitle:'Top view',profileTitle:'Plate profiles · side view',profileCaption:'Trapezoids, reliefs and slots',bedPreviewTitle:'Print bed layout',bedCaption:'Actual plate profiles are shown. Parts that do not fit are counted separately.',
+   howText:'The generator creates internal dividers only, without a floor or outer walls. STL files are generated locally in the browser.',footer:'Print dimensions and accuracy depend on filament and printer tuning. These dividers are for storage inside a drawer, not for carrying an inverted drawer.',
+   notNeeded:'Not required',longName:'Longitudinal',crossName:'Transverse',mm:'mm',invalidNumbers:'Fill in all numeric fields.',invalidDimensions:'Check part dimensions: 10–600 mm length and 5–150 mm height.',invalidGrid:'Rows and columns must be between 1 and 20.',invalidPrint:'Check plate thickness and slot clearance.',invalidBed:'Each print bed side must be 20–2000 mm.',invalidMargin:'Edge clearance must be nonnegative and leave usable print area.',invalidBottom:'Bottom length must be positive and cannot exceed top length.',invalidRadius:'Relief radius must be at least 1 mm smaller than divider height.',tooNarrow:'Bottom edge is too short for the selected relief.',slotsClose:'Slots are too close to each other.',slotAtEdge:'A slot intersects the bottom edge. Reduce the relief or top/bottom length difference.',badOutline:'Invalid plate outline.',triangulation:'Could not build STL with these parameters.',noDividers:'A 1 × 1 grid needs no dividers.',fixParams:'Fix parameters first.',noKind:'No dividers of the selected type.',bedDoesNotFit:'Some plates do not fit on the print bed. Change settings or download plate types separately.',
+   bedFit:(n,w,h)=>`All ${n} plates fit on the ${w} × ${h} mm bed.`,bedOverflow:(placed,all,w,h)=>`${placed} of ${all} plates fit on the ${w} × ${h} mm bed. Unplaced: ${all-placed}.`,validStatus:'Ready to export. STL uses the displayed layout.',overflowStatus:'The bed is too small for the complete set. Unplaced plates are counted above.'
+ }
+};
+let lang='ru';
+const t=key=>I18N[lang][key];
+const fmt=x=>(+x).toFixed(1).replace(/\.0$/,'');
+function applyLanguage(newLang){
+  lang=newLang;
+  document.documentElement.lang=lang;
+  $('langRu').setAttribute('aria-pressed',String(lang==='ru'));
+  $('langEn').setAttribute('aria-pressed',String(lang==='en'));
+  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});
+  try{localStorage.setItem('divider-generator-language',lang);}catch(_ignored){}
+  refresh();
+}
+const epsilon=1e-7;
+const point=(x,y)=>({x,y});
+function getConfig(){
+ const p=Object.fromEntries(numberIds.map(id=>[id,$(id).value.trim()===''?NaN:Number($(id).value)]));
+ p.cols=Math.round(p.cols);p.rows=Math.round(p.rows);
+ if(!$('useTaper').checked){p.depthBottom=p.depth;p.widthBottom=p.width;}
+ p.radius=$('useRound').checked?p.radius:0;
+ return p;
+}
+function intersections(len,n){return Array.from({length:n-1},(_,i)=>len*(i+1)/n);}
+function validate(p){
+ const issues=[];
+ if(!Object.values(p).every(Number.isFinite))issues.push(t('invalidNumbers'));
+ if(p.width<10||p.depth<10||p.height<5||p.width>600||p.depth>600||p.height>150)issues.push(t('invalidDimensions'));
+ if(p.cols<1||p.rows<1||p.cols>20||p.rows>20)issues.push(t('invalidGrid'));
+ if(p.thickness<.6||p.thickness>6||p.slotGap<0||p.slotGap>2||p.radius<0||p.radius>30)issues.push(t('invalidPrint'));
+ if(p.bedWidth<20||p.bedDepth<20||p.bedWidth>2000||p.bedDepth>2000)issues.push(t('invalidBed'));
+ if(p.bedMargin<0||p.bedMargin>Math.min(p.bedWidth,p.bedDepth)/2-2)issues.push(t('invalidMargin'));
+ if(p.depthBottom<=0||p.widthBottom<=0||p.depthBottom>p.depth||p.widthBottom>p.width)issues.push(t('invalidBottom'));
+ if(p.radius>=p.height-1)issues.push(t('invalidRadius'));
+ if(issues.length)return [...new Set(issues)];
+ const sw=p.thickness+p.slotGap;
+ for(const [len,bottom,n] of [[p.width,p.widthBottom,p.cols],[p.depth,p.depthBottom,p.rows]]){
+   const taper=(len-bottom)/2;
+   if(bottom-2*p.radius<=2)issues.push(t('tooNarrow'));
+   if(n>1&&len/n<=sw+1)issues.push(t('slotsClose'));
+   if(n>1&&len/n<=taper+p.radius+sw/2)issues.push(t('slotAtEdge'));
+ }
+ return [...new Set(issues)];
+}
+function relief(y,H,taper,r){
+ let add=taper*(1-y/H);
+ if(r>0 && y<r) add+=r-Math.sqrt(Math.max(0,r*r-(r-y)*(r-y)));
+ return add;
+}
+function makeOutline(len,H,slotCenters,slotSide,sw,taper,r){
+ const pts=[];
+ const add=(x,y)=>{const last=pts.at(-1);if(!last||Math.hypot(last.x-x,last.y-y)>epsilon)pts.push(point(x,y));};
+ const left=y=>relief(y,H,taper,r),right=y=>len-relief(y,H,taper,r);
+ const d=H/2+0.2;
+ add(left(0),0);
+ if(slotSide==='bottom')for(const c of slotCenters.slice().sort((a,b)=>a-b)){add(c-sw/2,0);add(c-sw/2,d);add(c+sw/2,d);add(c+sw/2,0);}
+ add(right(0),0);
+ if(r>0)for(let j=1;j<=16;j++){const y=r*j/16;add(right(y),y);}
+ add(right(H),H);
+ if(slotSide==='top')for(const c of slotCenters.slice().sort((a,b)=>b-a)){add(c+sw/2,H);add(c+sw/2,H-d);add(c-sw/2,H-d);add(c-sw/2,H);}
+ add(left(H),H);
+ if(r>0){add(left(r),r);for(let j=15;j>=0;j--){const y=r*j/16;add(left(y),y);}}
+ else add(left(0),0);
+ if(pts.length>1&&Math.hypot(pts[0].x-pts.at(-1).x,pts[0].y-pts.at(-1).y)<epsilon)pts.pop();
+ return removeCollinear(pts);
+}
+function signedArea(poly){return poly.reduce((a,p,i)=>a+p.x*poly[(i+1)%poly.length].y-poly[(i+1)%poly.length].x*p.y,0)/2;}
+function cross2(a,b,c){return (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);}
+function removeCollinear(poly){
+ let out=poly.slice(),changed=true;
+ while(changed&&out.length>3){changed=false;for(let i=0;i<out.length;i++){
+   const a=out[(i-1+out.length)%out.length],b=out[i],c=out[(i+1)%out.length];
+   if(Math.abs(cross2(a,b,c))<1e-9&&(b.x-a.x)*(c.x-b.x)+(b.y-a.y)*(c.y-b.y)>=-epsilon){out.splice(i,1);changed=true;break;}
+ }}return out;
+}
+function triangulate(poly){
+ if(poly.length<3)throw Error(t('badOutline'));
+ const ids=poly.map((_,i)=>i);if(signedArea(poly)<0)ids.reverse();
+ const faces=[];let guard=poly.length*poly.length;
+ while(ids.length>3&&guard-->0){
+  let found=false;
+  for(let j=0;j<ids.length;j++){
+   const ia=ids[(j-1+ids.length)%ids.length],ib=ids[j],ic=ids[(j+1)%ids.length];
+   const a=poly[ia],b=poly[ib],c=poly[ic];
+   if(cross2(a,b,c)<=1e-9)continue;
+   let contains=false;
+   for(const id of ids){if(id===ia||id===ib||id===ic)continue;const q=poly[id];
+    if(cross2(a,b,q)>=-1e-8&&cross2(b,c,q)>=-1e-8&&cross2(c,a,q)>=-1e-8){contains=true;break;}
+   }if(contains)continue;
+   faces.push([ia,ib,ic]);ids.splice(j,1);found=true;break;
+  }
+  if(!found)throw Error(t('triangulation'));
+ }
+ if(ids.length!==3)throw Error(t('triangulation'));
+ faces.push([ids[0],ids[1],ids[2]]);return faces;
+}
+function makePieces(p){
+ const pieces=[],centersAcross=intersections(p.width,p.cols),centersAlong=intersections(p.depth,p.rows);
+ const sw=p.thickness+p.slotGap;
+ for(let i=0;i<centersAcross.length;i++)pieces.push({kind:'long',len:p.depth,H:p.height,
+   outline:makeOutline(p.depth,p.height,centersAlong,'bottom',sw,(p.depth-p.depthBottom)/2,p.radius)});
+ for(let j=0;j<centersAlong.length;j++)pieces.push({kind:'cross',len:p.width,H:p.height,
+   outline:makeOutline(p.width,p.height,centersAcross,'top',sw,(p.width-p.widthBottom)/2,p.radius)});
+ return pieces;
+}
+function overlapRect(a,b){return a.x<b.x+b.w-1e-8&&a.x+a.w>b.x+1e-8&&a.y<b.y+b.h-1e-8&&a.y+a.h>b.y+1e-8;}
+function insideRect(a,b){return a.x>=b.x-1e-8&&a.y>=b.y-1e-8&&a.x+a.w<=b.x+b.w+1e-8&&a.y+a.h<=b.y+b.h+1e-8;}
+// Pack inside a trial rectangle, using its upper-left corner as a local origin.
+function packInto(pieces,limitWidth,limitDepth,gap){
+ let free=[{x:0,y:0,w:limitWidth,h:limitDepth}];
+ const sorted=pieces.map((piece,index)=>({...piece,index})).sort((a,b)=>Math.max(b.len,b.H)-Math.max(a.len,a.H)||b.len*b.H-a.len*a.H||a.index-b.index);
+ const placed=[],unplaced=[];
+ for(const piece of sorted){
+   let best=null;
+   for(const rot of [false,true]){
+     const w=(rot?piece.H:piece.len)+gap,h=(rot?piece.len:piece.H)+gap;
+     for(const fr of free){
+       if(w>fr.w+1e-8||h>fr.h+1e-8)continue;
+       const score=[Math.min(fr.w-w,fr.h-h),Math.max(fr.w-w,fr.h-h),fr.y,fr.x,Number(rot)];
+       if(!best||score.some((v,i)=>v!==best.score[i]&&(score.slice(0,i).every((x,j)=>x===best.score[j]))&&v<best.score[i]))best={x:fr.x,y:fr.y,w,h,rot,score};
+     }
+   }
+   if(!best){unplaced.push(piece);continue;}
+   const taken={x:best.x,y:best.y,w:best.w,h:best.h};
+   placed.push({...piece,dx:best.x+gap/2,dy:best.y+gap/2,rot:best.rot});
+   const next=[];
+   for(const fr of free){
+     if(!overlapRect(fr,taken)){next.push(fr);continue;}
+     if(taken.x>fr.x)next.push({x:fr.x,y:fr.y,w:taken.x-fr.x,h:fr.h});
+     if(taken.x+taken.w<fr.x+fr.w)next.push({x:taken.x+taken.w,y:fr.y,w:fr.x+fr.w-(taken.x+taken.w),h:fr.h});
+     if(taken.y>fr.y)next.push({x:fr.x,y:fr.y,w:fr.w,h:taken.y-fr.y});
+     if(taken.y+taken.h<fr.y+fr.h)next.push({x:fr.x,y:taken.y+taken.h,w:fr.w,h:fr.y+fr.h-(taken.y+taken.h)});
+   }
+   free=next.filter((r,i)=>r.w>1e-8&&r.h>1e-8&&!next.some((other,j)=>i!==j&&insideRect(r,other)&&((other.w*other.h>r.w*r.h+1e-8)||((Math.abs(other.w*other.h-r.w*r.h)<1e-8)&&j<i))));
+ }
+ return {placed,unplaced};
+}
+function boundingBox(placed){
+ const minX=Math.min(...placed.map(piece=>piece.dx)),minY=Math.min(...placed.map(piece=>piece.dy));
+ const maxX=Math.max(...placed.map(piece=>piece.dx+(piece.rot?piece.H:piece.len)));
+ const maxY=Math.max(...placed.map(piece=>piece.dy+(piece.rot?piece.len:piece.H)));
+ return {minX,minY,width:maxX-minX,height:maxY-minY};
+}
+function packPieces(pieces,bedWidth,bedDepth,gap=3,margin=10){
+ const usableWidth=bedWidth-2*margin,usableDepth=bedDepth-2*margin;
+ if(usableWidth<=0||usableDepth<=0)return {packed:[],unplaced:pieces.slice(),bedWidth,bedDepth,margin};
+ // Try narrower virtual beds as well: a full-width pack is often an awkward L shape.
+ const trialWidths=new Set([usableWidth]);
+ for(let i=1;i<=20;i++)trialWidths.add(usableWidth*i/20);
+ for(const piece of pieces){
+   for(const edge of [piece.len,piece.H]){
+     for(const n of [1,2,3,4])if(n*(edge+gap)<=usableWidth+1e-8)trialWidths.add(n*(edge+gap));
+   }
+ }
+ let winner=null;
+ for(const trialWidth of [...trialWidths].sort((a,b)=>a-b)){
+   if(trialWidth<gap+0.01)continue;
+   const attempt=packInto(pieces,trialWidth,usableDepth,gap);
+   if(!attempt.placed.length)continue;
+   const b=boundingBox(attempt.placed);
+   // Prefer fitting more plates. With equal counts prefer a compact, nearly square cluster.
+   const compact=b.width*b.height+0.12*(b.width-b.height)**2;
+   const score=compact;
+   if(!winner||attempt.placed.length>winner.placed.length||
+      (attempt.placed.length===winner.placed.length&&score<winner.score-1e-7))winner={...attempt,b,score};
+ }
+ if(!winner)return {packed:[],unplaced:pieces.slice(),bedWidth,bedDepth,margin};
+ // Only translation is applied: same physical coordinates are used in SVG and STL.
+ const tx=(bedWidth-winner.b.width)/2-winner.b.minX;
+ const ty=(bedDepth-winner.b.height)/2-winner.b.minY;
+ const packed=winner.placed.map(piece=>({...piece,dx:piece.dx+tx,dy:piece.dy+ty}));
+ return {packed,unplaced:winner.unplaced,bedWidth,bedDepth,margin};
+}
+function transformPoint(p,piece){
+ return piece.rot?{x:piece.dx+piece.H-p.y,y:piece.dy+p.x}:{x:piece.dx+p.x,y:piece.dy+p.y};
+}
+function p3(p,z,piece){return {...transformPoint(p,piece),z};}
+function makeTrianglesForPiece(piece,thickness){
+ const tris=[],poly=piece.outline,faces=triangulate(poly);
+ for(const [a,b,c] of faces){tris.push([p3(poly[a],thickness,piece),p3(poly[b],thickness,piece),p3(poly[c],thickness,piece)]);tris.push([p3(poly[c],0,piece),p3(poly[b],0,piece),p3(poly[a],0,piece)]);}
+ const ccw=signedArea(poly)>0;
+ for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length];const a0=p3(a,0,piece),b0=p3(b,0,piece),a1=p3(a,thickness,piece),b1=p3(b,thickness,piece);
+   if(ccw)tris.push([a0,b0,b1],[a0,b1,a1]);else tris.push([a0,b1,b0],[a0,a1,b1]);
+ }return tris;
+}
+function serializeSTL(pieces,thickness){
+ const tris=pieces.flatMap(piece=>makeTrianglesForPiece(piece,thickness));
+ if(!tris.length)throw Error(t('noDividers'));
+ const out=new ArrayBuffer(84+50*tris.length),dv=new DataView(out);
+ const head='Divider Generator - parametric drawer dividers';
+ for(let i=0;i<head.length&&i<80;i++)dv.setUint8(i,head.charCodeAt(i));
+ dv.setUint32(80,tris.length,true);let offset=84;
+ for(const tri of tris){const [a,b,c]=tri;const ux=b.x-a.x,uy=b.y-a.y,uz=b.z-a.z,vx=c.x-a.x,vy=c.y-a.y,vz=c.z-a.z;
+  let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;const size=Math.hypot(nx,ny,nz)||1;nx/=size;ny/=size;nz/=size;
+  for(const x of [nx,ny,nz,...tri.flatMap(v=>[v.x,v.y,v.z])]){dv.setFloat32(offset,x,true);offset+=4;}
+  dv.setUint16(offset,0,true);offset+=2;
+ }return out;
+}
+function pathFor(poly,H){return poly.map((pt,i)=>`${i?'L':'M'}${pt.x.toFixed(3)},${(H-pt.y).toFixed(3)}`).join(' ')+' Z';}
+function drawProfile(svg,piece){
+ if(!piece){svg.setAttribute('viewBox','0 0 100 50');svg.innerHTML=`<text x="50" y="25" font-size="8" text-anchor="middle" fill="#8896a5">${t('notNeeded')}</text>`;return;}
+ const pad=3,L=piece.len,H=piece.H;svg.setAttribute('viewBox',`${-pad} ${-pad} ${L+2*pad} ${H+2*pad}`);
+ svg.innerHTML=`<path d="${pathFor(piece.outline,H)}" fill="#a5e1d6" stroke="#156d60" stroke-width="${Math.max(.3,Math.min(.8,L/140))}" stroke-linejoin="round"/>`;
+}
+function drawTopView(svg,p){
+ const D=p.depth,W=p.width,pad=Math.max(5,Math.min(D,W)*.12);
+ svg.setAttribute('viewBox',`${-pad} ${-pad} ${D+2*pad} ${W+2*pad}`);
+ let html=`<rect x="0" y="0" width="${D}" height="${W}" rx="${Math.min(4,W/6)}" fill="#e8f4f2" stroke="#7aa8a1" stroke-width="${Math.min(1.4,W/32)}"/>`;
+ const longPos=intersections(W,p.cols),crossPos=intersections(D,p.rows);
+ for(const x of crossPos)html+=`<line x1="${x}" y1="0" x2="${x}" y2="${W}" stroke="#198b78" stroke-width="${Math.min(2.3,W/18)}"/>`;
+ for(const y of longPos)html+=`<line x1="0" y1="${y}" x2="${D}" y2="${y}" stroke="#126b91" stroke-width="${Math.min(2.3,W/18)}"/>`;
+ svg.innerHTML=html;
+}
+function drawBedView(svg,p,layout){
+ const W=p.bedWidth,D=p.bedDepth;
+ svg.setAttribute('viewBox',`-1 -1 ${W+2} ${D+2}`);
+ const stroke=Math.max(0.35,Math.min(W,D)/400);
+ const grid= W<=400&&D<=400?10:50;
+ let html=`<defs><pattern id="bedGrid" width="${grid}" height="${grid}" patternUnits="userSpaceOnUse"><path d="M ${grid} 0 L 0 0 0 ${grid}" fill="none" stroke="#c9d5df" stroke-width="${stroke/2}"/></pattern></defs><rect width="${W}" height="${D}" fill="#fff" stroke="#526b7b" stroke-width="${stroke*2}"/><rect width="${W}" height="${D}" fill="url(#bedGrid)"/><rect x="${p.bedMargin}" y="${p.bedMargin}" width="${W-2*p.bedMargin}" height="${D-2*p.bedMargin}" fill="none" stroke="#94a3b8" stroke-width="${stroke}" stroke-dasharray="3 3"/>`;
+ for(const piece of layout.packed){
+   const d=piece.outline.map((pt,i)=>{const q=transformPoint(pt,piece);return `${i?'L':'M'}${q.x.toFixed(3)},${q.y.toFixed(3)}`;}).join(' ')+' Z';
+   const color=piece.kind==='long'?'#9ed3ec':'#a3e5d8';
+   html+=`<path d="${d}" fill="${color}" stroke="#18637a" stroke-width="${stroke}" stroke-linejoin="round"/>`;
+ }
+ svg.innerHTML=html;
+}
+function setNotice(message,error=false){$('notice').textContent=message;$('notice').classList.toggle('error',error);}
+let current=null;
+function refresh(){
+ const p=getConfig();$('taperField').classList.toggle('disabled',!$('useTaper').checked);$('radiusField').classList.toggle('disabled',!$('useRound').checked);
+ const issues=validate(p);
+ for(const id of ['downloadAll','downloadLong','downloadCross'])$(id).disabled=!!issues.length;
+ if(issues.length){current=null;setNotice(issues.join(' '),true);$('bedResult').textContent='';$('bedView').innerHTML='';return;}
+ try{
+  const pieces=makePieces(p);
+  if(!pieces.length){current=null;setNotice(t('noDividers'),true);$('bedResult').textContent='';for(const id of ['downloadAll','downloadLong','downloadCross'])$(id).disabled=true;return;}
+  const long=pieces.find(x=>x.kind==='long'),cross=pieces.find(x=>x.kind==='cross');
+  if(long)triangulate(long.outline);if(cross)triangulate(cross.outline);
+  const layout=packPieces(pieces,p.bedWidth,p.bedDepth,3,p.bedMargin);
+  current={p,pieces,layout};
+  $('statCells').textContent=p.rows*p.cols;
+  $('statLong').textContent=p.cols-1;
+  $('statCross').textContent=p.rows-1;
+  $('sizeLabel').textContent=`${fmt(p.width)} × ${fmt(p.depth)} ${t('mm')}`;
+  $('bedSizeLabel').textContent=`${fmt(p.bedWidth)} × ${fmt(p.bedDepth)} ${t('mm')}`;
+  drawTopView($('topView'),p);
+  drawProfile($('longView'),long);
+  drawProfile($('crossView'),cross);
+  $('longLabel').textContent=`${t('longName')} · ${fmt(p.depth)} × ${fmt(p.height)} ${t('mm')}`;
+  $('crossLabel').textContent=`${t('crossName')} · ${fmt(p.width)} × ${fmt(p.height)} ${t('mm')}`;
+  drawBedView($('bedView'),p,layout);
+  const fits=layout.unplaced.length===0;
+  $('bedResult').textContent=fits?t('bedFit')(pieces.length,fmt(p.bedWidth),fmt(p.bedDepth)):t('bedOverflow')(layout.packed.length,pieces.length,fmt(p.bedWidth),fmt(p.bedDepth));
+  $('bedResult').className='bed-result '+(fits?'ok':'fail');
+  $('downloadAll').disabled=!fits;
+  for(const kind of ['long','cross']){
+    const subset=pieces.filter(piece=>piece.kind===kind);
+    $(kind==='long'?'downloadLong':'downloadCross').disabled=!subset.length||!!packPieces(subset,p.bedWidth,p.bedDepth,3,p.bedMargin).unplaced.length;
+  }
+  setNotice(fits?t('validStatus'):t('overflowStatus'),!fits);
+ }catch(err){current=null;setNotice(err.message,true);$('bedResult').textContent='';for(const id of ['downloadAll','downloadLong','downloadCross'])$(id).disabled=true;}
+}
+function exportModel(kind){
+ try{
+  if(!current)throw Error(t('fixParams'));
+  const {p,pieces,layout}=current,selected=kind==='all'?pieces:pieces.filter(x=>x.kind===kind);
+  if(!selected.length)throw Error(t('noKind'));
+  const packed=kind==='all'?layout:packPieces(selected,p.bedWidth,p.bedDepth,3,p.bedMargin);
+  if(packed.unplaced.length)throw Error(t('bedDoesNotFit'));
+  const blob=new Blob([serializeSTL(packed.packed,p.thickness)],{type:'model/stl'});
+  const name=`divider-generator-${kind}-${p.width}x${p.depth}-${p.cols}x${p.rows}.stl`;
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ }catch(err){setNotice(err.message,true);}
+}
+for(const id of numberIds)$(id).addEventListener('input',refresh);
+for(const id of ['useTaper','useRound'])$(id).addEventListener('change',refresh);
+$('langRu').addEventListener('click',()=>applyLanguage('ru'));
+$('langEn').addEventListener('click',()=>applyLanguage('en'));
+$('downloadAll').addEventListener('click',()=>exportModel('all'));
+$('downloadLong').addEventListener('click',()=>exportModel('long'));
+$('downloadCross').addEventListener('click',()=>exportModel('cross'));
+let preferred='ru';try{preferred=localStorage.getItem('divider-generator-language')==='en'?'en':'ru';}catch(_ignored){}
+applyLanguage(preferred);
+</script>
+</body>
+</html>
